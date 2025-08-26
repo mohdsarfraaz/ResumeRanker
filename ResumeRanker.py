@@ -10,10 +10,50 @@ from datetime import datetime
 from rapidfuzz import fuzz
 from sentence_transformers import SentenceTransformer, util
 
-# Load semantic model (only once)
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# ----------------- PAGE CONFIG -----------------
+st.set_page_config(page_title="Resume Ranker", layout="wide")
 
-# --- Helper Functions ---
+# ----------------- CUSTOM STYLING -----------------
+st.markdown(
+    """
+    <style>
+    .main-title {
+        font-size: 50px;
+        font-weight: bold;
+        text-align: center;
+        color: #2E86C1;
+        padding: 20px 0;
+    }
+    .subtitle {
+        font-size: 22px;
+        text-align: center;
+        color: #555;
+        margin-bottom: 30px;
+    }
+    .info-box {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+    .success {background-color: #e8f5e9; color: #2e7d32;}
+    .warning {background-color: #fff3e0; color: #ef6c00;}
+    .error {background-color: #ffebee; color: #c62828;}
+    </style>
+    <div class="main-title">📂 Resume Ranker</div>
+    <div class="subtitle">Smart Resume Shortlisting System</div>
+    """,
+    unsafe_allow_html=True
+)
+
+# ----------------- MODEL LOADING (cached) -----------------
+@st.cache_resource
+def load_model():
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+model = load_model()
+
+# ----------------- HELPER FUNCTIONS -----------------
+@st.cache_data
 def extract_text_from_path(file_path):
     """Extract text from a PDF or DOCX file path."""
     try:
@@ -96,12 +136,8 @@ def match_skills(required_skills, resume_text, threshold=80):
 
     return list(set(matched))
 
-
-# --- Streamlit UI ---
-st.set_page_config(page_title="Resume Ranking System", layout="wide")
-st.title("📄 Smart Resume Shortlisting System")
-
-jd_text = st.text_area("Paste Job Description", height=200)
+# ----------------- APP UI -----------------
+jd_text = st.text_area("📑 Paste Job Description", height=200)
 
 col1, col2 = st.columns(2)
 with col1:
@@ -144,46 +180,43 @@ elif mode == "☁️ Upload Mode (Public)":
                 f.write(uploaded_file.getbuffer())
             resume_files_paths.append(resume_path)
 
-# --- Processing ---
+# ----------------- PROCESSING -----------------
 if resume_files_paths:
     if not jd_text.strip():
         st.warning("⚠️ Please provide a Job Description.")
     else:
-        progress_bar = st.progress(0, text="Initializing...")
-        required_skills = [s.strip().lower() for s in skills_filter.split(",") if s.strip()]
+        with st.spinner("Processing resumes..."):
+            required_skills = [s.strip().lower() for s in skills_filter.split(",") if s.strip()]
 
-        for i, file_path in enumerate(resume_files_paths):
-            file_name = os.path.basename(file_path)
-            progress_bar.progress((i + 1) / len(resume_files_paths), text=f"Processing {file_name}...")
+            for file_path in resume_files_paths:
+                file_name = os.path.basename(file_path)
 
-            text = extract_text_from_path(file_path)
-            if not text:
-                continue
+                text = extract_text_from_path(file_path)
+                if not text:
+                    continue
 
-            score = calculate_similarity(jd_text, text)
-            experience = extract_experience(text)
-            matched_skills = match_skills(required_skills, text)
-            location_match = not location_filter.strip() or (location_filter.strip().lower() in text.lower())
+                score = calculate_similarity(jd_text, text)
+                experience = extract_experience(text)
+                matched_skills = match_skills(required_skills, text)
+                location_match = not location_filter.strip() or (location_filter.strip().lower() in text.lower())
 
-            is_qualified = (
-                score >= min_score
-                and experience >= min_exp
-                and location_match
-                and (len(matched_skills) > 0 if required_skills else True)
-            )
+                is_qualified = (
+                    score >= min_score
+                    and experience >= min_exp
+                    and location_match
+                    and (len(matched_skills) > 0 if required_skills else True)
+                )
 
-            results.append(
-                {
-                    "Resume": file_name,
-                    "Score (%)": score,
-                    "Experience (yrs)": experience,
-                    "Qualified": "✅ Yes" if is_qualified else "❌ No",
-                    "Matched Skills": ", ".join(list(set(matched_skills))) or "None",
-                    "Location Match": "✅ Yes" if location_match else "❌ No",
-                }
-            )
-
-        progress_bar.empty()
+                results.append(
+                    {
+                        "Resume": file_name,
+                        "Score (%)": round(score, 2),
+                        "Experience (yrs)": round(experience, 1),
+                        "Qualified": "✅ Yes" if is_qualified else "❌ No",
+                        "Matched Skills": ", ".join(list(set(matched_skills))) or "None",
+                        "Location Match": "✅ Yes" if location_match else "❌ No",
+                    }
+                )
 
         if results:
             df = pd.DataFrame(results).sort_values(by="Score (%)", ascending=False).reset_index(drop=True)
@@ -191,6 +224,7 @@ if resume_files_paths:
 
             df["Score (%)"] = df["Score (%)"].map(lambda x: f"{x:.2f}")
             df["Experience (yrs)"] = df["Experience (yrs)"].map(lambda x: f"{x:.1f}")
+
 
             # Add clickable links for each resume
             def make_download_link(file_name):
@@ -224,12 +258,12 @@ if resume_files_paths:
             csv = df.to_csv(index_label="Rank").encode("utf-8")
             st.download_button("📥 Download Full Results (CSV)", csv, "resume_ranking.csv", "text/csv")
 
-# --- Footer Signature ---
-st.markdown("---")  # horizontal line
+# ----------------- FOOTER -----------------
+st.markdown("---")
 st.markdown(
     """
-    <div style="text-align: left; padding: 15px; font-size: 20px; font-family: cursive; color: grey;">
-        ✍️ 𝓜𝓭 𝓢𝓪𝓻𝓯𝓻𝓪𝓪𝔃
+    <div style="text-align: center; padding: 15px; font-size: 18px; font-family: cursive; color: grey;">
+        ✍️ Developed by <b>Md Sarfraaz</b>
     </div>
     """,
     unsafe_allow_html=True

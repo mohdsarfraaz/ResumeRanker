@@ -30,4 +30,4 @@ automatically screen, rank, and shortlist resumes based on job descriptions.
 ## 💻 How to Run Locally
 ```bash
 pip install -r requirements.txt
-streamlit run Smart_Resume_Shortlisting_System.py
+streamlit run ResumeRanker.py

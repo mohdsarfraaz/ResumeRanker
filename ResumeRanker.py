@@ -98,7 +98,7 @@ def match_skills(required_skills, resume_text, threshold=80):
 
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Resume Shortlisting System", layout="wide")
+st.set_page_config(page_title="Resume Ranking System", layout="wide")
 st.title("📄 Smart Resume Shortlisting System")
 
 jd_text = st.text_area("Paste Job Description", height=200)
@@ -189,11 +189,48 @@ if resume_files_paths:
             df = pd.DataFrame(results).sort_values(by="Score (%)", ascending=False).reset_index(drop=True)
             df.index += 1
 
-            st.subheader("✅ Qualified Candidates")
-            st.dataframe(df[df["Qualified"] == "✅ Yes"], use_container_width=True)
+            df["Score (%)"] = df["Score (%)"].map(lambda x: f"{x:.2f}")
+            df["Experience (yrs)"] = df["Experience (yrs)"].map(lambda x: f"{x:.1f}")
 
-            st.subheader("❌ Unqualified Candidates")
-            st.dataframe(df[df["Qualified"] == "❌ No"], use_container_width=True)
+            # Add clickable links for each resume
+            def make_download_link(file_name):
+                resume_path = os.path.join(resume_folder, file_name)
+                return f'<a href="file:///{resume_path}" download="{file_name}">📂 Download</a>'
 
+            df["Download Resume"] = df["Resume"].apply(make_download_link)
+
+            # Function to render styled table
+            def render_table(dataframe, title):
+                st.subheader(title)
+                if dataframe.empty:
+                    st.info("No data available.")
+                else:
+                    styled_df = (
+                        dataframe.style
+                        .set_table_styles(
+                            [{"selector": "th", "props": [("text-align", "left")]}]  # align headers left
+                        )
+                        .set_properties(**{"text-align": "left"})  # align cell text left
+                    )
+                    st.markdown(styled_df.to_html(escape=False), unsafe_allow_html=True)
+
+            # ✅ Qualified Candidates
+            render_table(df[df["Qualified"] == "✅ Yes"], "✅ Qualified Candidates")
+
+            # ❌ Unqualified Candidates
+            render_table(df[df["Qualified"] == "❌ No"], "❌ Unqualified Candidates")
+
+            # 📥 Export All Results as CSV
             csv = df.to_csv(index_label="Rank").encode("utf-8")
             st.download_button("📥 Download Full Results (CSV)", csv, "resume_ranking.csv", "text/csv")
+
+# --- Footer Signature ---
+st.markdown("---")  # horizontal line
+st.markdown(
+    """
+    <div style="text-align: left; padding: 15px; font-size: 20px; font-family: cursive; color: grey;">
+        ✍️ 𝓜𝓭 𝓢𝓪𝓻𝓯𝓻𝓪𝓪𝔃
+    </div>
+    """,
+    unsafe_allow_html=True
+)

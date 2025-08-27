@@ -216,6 +216,7 @@ if resume_files_paths:
                         "Qualified": "✅ Yes" if is_qualified else "❌ No",
                         "Matched Skills": ", ".join(list(set(matched_skills))) or "None",
                         "Location Match": "✅ Yes" if location_match else "❌ No",
+                        "File Path": file_path
                     }
                 )
 
@@ -242,7 +243,7 @@ if resume_files_paths:
                 except Exception as e:
                     return f"❌ Error: {str(e)}"
                     
-            df["Download Resume"] = [make_download_link(path) for path in resume_files_paths]
+            df["Download Resume"] = [make_download_link(path) for path in df["File Path"]]
 
             # Function to render styled table
             def render_table(dataframe, title):

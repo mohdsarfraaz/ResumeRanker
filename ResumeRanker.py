@@ -4,6 +4,7 @@ import PyPDF2
 import docx
 import os
 import re
+import base64
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
@@ -227,11 +228,21 @@ if resume_files_paths:
 
 
             # Add clickable links for each resume
-            def make_download_link(file_name):
-                resume_path = os.path.join(resume_folder, file_name)
-                return f'<a href="file:///{resume_path}" download="{file_name}">📂 Download</a>'
-
-            df["Download Resume"] = df["Resume"].apply(make_download_link)
+            def make_download_link(file_path):
+                """
+                Returns an HTML download link for a resume file.
+                Works on Streamlit Cloud.
+                """
+                try:
+                    with open(file_path, "rb") as f:
+                        data = f.read()
+                    b64 = base64.b64encode(data).decode()  # encode file to base64
+                    file_name = os.path.basename(file_path)
+                    return f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📂 Download</a>'
+                except Exception as e:
+                    return f"❌ Error: {str(e)}"
+                    
+            df["Download Resume"] = [make_download_link(path) for path in resume_files_paths]
 
             # Function to render styled table
             def render_table(dataframe, title):

@@ -244,7 +244,7 @@ if resume_files_paths:
                     return f"❌ Error: {str(e)}"
                     
             df["Download Resume"] = [make_download_link(path) for path in df["File Path"]]
-            df_display = df.drop(columns=["File Path"])
+            df = df.drop(columns=["File Path"])
             
             # Function to render styled table
             def render_table(dataframe, title):

@@ -424,18 +424,20 @@ if resume_files_paths:
             with col3: st.metric("Unqualified", (df["Qualified"] == "❌ No").sum())
 
             # Score Distribution
-            st.markdown("### 🎯 Match Score Distribution")
-            fig, ax = plt.subplots()
-            df["Score (%)"].astype(float).plot(kind="hist", bins=10, ax=ax)
-            ax.set_xlabel("Match Score (%)")
-            st.pyplot(fig)
+            col1, col2 = st.columns(2)
+            with col1: st.markdown("### 🎯 Match Score Distribution")
+                        fig, ax = plt.subplots()
+                        df["Score (%)"].astype(float).plot(kind="hist", bins=10, ax=ax)
+                        ax.set_xlabel("Match Score (%)")
+                        st.pyplot(fig)
 
             # Experience Distribution
-            st.markdown("### ⏳ Experience (Years) Distribution")
-            fig, ax = plt.subplots()
-            df["Experience (yrs)"].astype(float).plot(kind="hist", bins=10, ax=ax)
-            ax.set_xlabel("Experience (Years)")
-            st.pyplot(fig)
+            with col2:
+                st.markdown("### ⏳ Experience (Years) Distribution")
+                fig, ax = plt.subplots()
+                df["Experience (yrs)"].astype(float).plot(kind="hist", bins=10, ax=ax)
+                ax.set_xlabel("Experience (Years)")
+                st.pyplot(fig)
 
             # Word Cloud for Skills
             try:
